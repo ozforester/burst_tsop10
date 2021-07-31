@@ -58,32 +58,25 @@ main:				;
         brne main1              ;
 	rcall error_blink	; error blink
 	main1:			;
-	rcall pcf_init		;
-	rcall pcf_led_on_off	; light led connected to pcf8574
+	rcall prepare		;
+	rcall burst		; light led connected to pcf8574
+	rcall sleep		;
 	loop:			;
 	rjmp loop		; waste a time
 ret				;
 
-pcf_led_on_off:			;
-	pcfled:			;
-	sbr data, 1<<3		; P3 p-u
+prepare:			;
 	rcall twi_start		;
 	rcall twi_sla_w		;
 	rcall twi_data_w	;
         rcall twi_stop          ;
-        ldi counter, 5          ; delay
-        rcall delay             ;
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-        cbr data, 1<<3          ; P3 sink
-        rcall twi_data_w        ;
-        rcall twi_stop          ;
-        ldi counter, 5          ; delay
-        rcall delay             ;
-	rjmp pcf_led_on_off	;
 ret				;
 
-pcf_init:			;
+burst:				;
+	nop			;
+ret				;
+
+sleep:				;
 	nop			;
 ret				;
 
