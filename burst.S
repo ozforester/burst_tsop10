@@ -69,19 +69,58 @@ ret				;
 prepare:			;
 	rcall twi_start		;
 	rcall twi_sla_w		;
+
+	ldi data, 3		; disable outputs
 	rcall twi_data_w	;
+        ldi data, 0xff          ;
+        rcall twi_data_w        ;
+
+	ldi temp, 16		; powerdown dividers (16-23 regs)
+	prepare1:		;
+	mov data, temp		;
+	rcall twi_data_w        ;
+	ldi data, 0x80		;
+        rcall twi_data_w        ;
+	inc temp		;
+	cpi temp, 24		;
+	brne prepare1		;
+
+	; set interrupt masks
+	; read reg 2
+	; set 00000xxx
+	; write reg 2
+
         rcall twi_stop          ;
 ret				;
 
 burst:				;
-	nop			;
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
+
+	ldi temp, 0		; registers
+	burst1:			;
+	mov data, temp		;
+        rcall twi_data_w        ;
+	ldi data, builder_regs	; its bytes
+        rcall twi_data_w        ;
+	inc temp		;
+	cpi temp, 234		;
+	brne burst1		;
+
+        rcall twi_stop          ;
 ret				;
 
-sleep:				;
-	nop			;
+polish:				;
+        ldi data, 177           ; plla and pllb soft reset
+        rcall twi_data_w        ;
+        ldi data, 0xac          ;
+        rcall twi_data_w        ;
+
+	; enable outputs 0,1,2
+	; set reg 3 = 00000111
 ret				;
 
-polish:                         ;
+sleep:                          ;
         nop                     ;
 ret                             ;
 
@@ -206,6 +245,6 @@ TIMER0_OVF_vect:		; counter--
 reti				;
 
 __vector_default:		;
-	reti			;
+reti				;
 
 .end
