@@ -58,9 +58,10 @@ main:				;
         brne main1              ;
 	rcall error_blink	; error blink
 	main1:			;
-	rcall prepare		;
-	rcall burst		; light led connected to pcf8574
-	rcall sleep		;
+	rcall prepare		; disable outputs etc.
+	rcall burst		; load registers
+	rcall polish		; soft reset and enable outputs
+	rcall sleep		; power safe
 	loop:			;
 	rjmp loop		; waste a time
 ret				;
@@ -79,6 +80,10 @@ ret				;
 sleep:				;
 	nop			;
 ret				;
+
+polish:                         ;
+        nop                     ;
+ret                             ;
 
 twi_scan:			;
 	ldi address, 127	; will step backward
