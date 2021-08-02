@@ -19,15 +19,19 @@
 #define DATA_ACK  0x28
 #define DATA_NACK 0x30
 
+.global __vector_default        ; Note [10] nongnu.org assembly
+.global TIMER0_OVF_vect         ; doc
+.global main                    ;
+
 temp    = 16			; common reg
 counter = 17			; delay counter reg
 code    = 18			; blink code reg
 address = 19			; twi address reg
 data    = 20			; twi data reg
 
-.section .data
+.section .text
 
-builder_regs: .byte \
+regs: .byte \
 0x00,0x00,0x12,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
 0x00,0x04,0x00,0x50,0x50,0x50,0x00,0x50,0x00,0x00,0x00,0x01,0x00,0x0a,0x00,0x00,\
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x5e,0x00,0x00,\
@@ -45,9 +49,6 @@ builder_regs: .byte \
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ; clockbuilder cooked 233 regs
 
 .section .text			; code section
-.global __vector_default        ; Note [10] nongnu.org assembly
-.global TIMER0_OVF_vect         ; doc
-.global main                    ;
 
 main:				;
 	rcall led_port_init	; D7 out,low
@@ -62,6 +63,7 @@ main:				;
 	rcall burst		; load registers
 	rcall polish		; soft reset and enable outputs
 	rcall sleep		; power safe
+        rcall led_on            ;
 	loop:			;
 	rjmp loop		; waste a time
 ret				;
@@ -69,55 +71,70 @@ ret				;
 prepare:			;
 	rcall twi_start		;
 	rcall twi_sla_w		;
-
 	ldi data, 3		; disable outputs
 	rcall twi_data_w	;
         ldi data, 0xff          ;
         rcall twi_data_w        ;
+        rcall twi_stop          ;
 
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
 	ldi temp, 16		; powerdown dividers (16-23 regs)
-	prepare1:		;
 	mov data, temp		;
-	rcall twi_data_w        ;
+        rcall twi_data_w        ;
+	prepare1:		; burst
 	ldi data, 0x80		;
         rcall twi_data_w        ;
 	inc temp		;
 	cpi temp, 24		;
 	brne prepare1		;
+        rcall twi_stop          ;
 
-	; set interrupt masks
-	; read reg 2
-	; set 00000xxx
-	; write reg 2
-
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
+        ldi data, 2             ; set interrupt masks (w/o reading)
+        rcall twi_data_w        ;
+        ldi data, 0x00          ;
+        rcall twi_data_w        ;
         rcall twi_stop          ;
 ret				;
 
 burst:				;
         rcall twi_start         ;
         rcall twi_sla_w         ;
-
-	ldi temp, 0		; registers
-	burst1:			;
+	ldi temp, 0		; from reg 0
 	mov data, temp		;
         rcall twi_data_w        ;
-	ldi data, builder_regs	; its bytes
-        rcall twi_data_w        ;
-	inc temp		;
-	cpi temp, 234		;
-	brne burst1		;
 
+        ldi r30, lo8(pm(regs))  ; Z
+        ldi r31, hi8(pm(regs))  ; Z
+        burst1:                 ; burst
+	lpm			; bytes
+	mov data, r0		;
+        rcall twi_data_w        ;
+        adiw Z, 1
+	cpi r31, 234		; need steps till reg 233
+	brne burst1		; r31 > 6 cause error
+	adiw Z, 1
         rcall twi_stop          ;
 ret				;
 
 polish:				;
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
         ldi data, 177           ; plla and pllb soft reset
         rcall twi_data_w        ;
         ldi data, 0xac          ;
         rcall twi_data_w        ;
+        rcall twi_stop          ;
 
-	; enable outputs 0,1,2
-	; set reg 3 = 00000111
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
+	ldi data, 3		; output control
+        rcall twi_data_w        ;
+        ldi data, 0x07          ; enable clk 0,1,2
+        rcall twi_data_w        ;
+        rcall twi_stop          ;
 ret				;
 
 sleep:                          ;
@@ -135,26 +152,32 @@ twi_scan:			;
 	subi address, 1		; else next address
 	cpi address, 0		; last address
 	breq twscan2		; exit with zero address
-	rjmp twscan1		;
+	rjmp twscan1		; rep start
 	twscan2:		;
 	rcall twi_stop		;
 ret				;
 
 twi_data_w:					;
+        push temp                               ;
+	tdw1:					;
+        in temp, TWCR                           ;
+        sbrs temp, TWINT                        ; ready?
+        rjmp tdw1                               ; not yet, repeat
 	mov temp, data				;
 	out TWDR, temp				; data
 	ldi temp, ((1<<TWINT)|(1<<TWEN))	;
 	out TWCR, temp				; go
-	tdw1:					;
+	tdw2:					;
 	in temp, TWCR				;
 	sbrs temp, TWINT			; sent?
-	rjmp tdw1				; not yet, repeat
+	rjmp tdw2				; not yet, repeat
 	in temp, TWSR				; ok, read status
 	andi temp, 0xF8				;
 	cpi temp, DATA_ACK			;
-	breq tdw2				; ok
+	breq tdw3				; ok
         rcall error_blink                       ; error (blinking loop)
-	tdw2:					;
+	tdw3:					;
+	pop temp				;
 ret						;
 
 twi_sla_w:					;
@@ -171,7 +194,7 @@ twi_sla_w:					;
         andi temp, 0xF8                         ;
         cpi temp, SLAW_ACK                      ;
 	breq slaw2				; acked (stay temp untouched)
-	;rcall error_blink			; uncomment if used w/o autodetect
+	;rcall error_blink			; unused w/ autodetect
 	ser temp				; else (temp=0xFF)
 	slaw2:					;
 ret						;
@@ -194,19 +217,24 @@ twi_start:						;
 ret							; acked
 
 twi_stop:						;
+	push temp					;
 	ldi temp, ((1<<TWINT)|(1<<TWEN)|(1<<TWSTO))	;
         out TWCR, temp                                  ;
+	pop temp					;
 ret							;
 
+led_on:				;
+        sbi PORTD, 7            ; D7 high
+ret				;
+
 error_blink:			;
-        eb:                     ;
         sbi PORTD, 7            ; D7 high
         ldi counter, 1          ; delay on
         rcall delay             ;
         cbi PORTD, 7            ; D7 low
         ldi counter, 3          ; delay off
         rcall delay             ;
-        rjmp eb                 ;
+        rjmp error_blink        ;
 ret				;
 
 delay:                          ; counter itself decrements by t0 isr
