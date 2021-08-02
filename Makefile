@@ -8,10 +8,13 @@ SOURCES := $(wildcard *.S)
 OBJECTS  = $(SOURCES:.S=.o)
 HEX = $(SOURCES:.S=.hex)
 F_CPU = 4000000L
+#FLAGS = -fno-pic -fno-stack-protector -no-pie
+CFLAGS = -fno-stack-protector -fno-PIC
+LFLAGS = -no-pie
 
 all:
-	avr-gcc -DF_CPU=${F_CPU} -Wall -Os -mmcu=atmega8 -o ${TARGET}.o ${TARGET}.S
-	avr-ld -o ${TARGET}.elf ${TARGET}.o
+	avr-gcc ${CFLAGS} -c -DF_CPU=${F_CPU} -Wall -Os -mmcu=atmega8 -o ${TARGET}.o ${TARGET}.S
+	avr-gcc ${LFLAGS} -Os -o ${TARGET}.elf ${TARGET}.o
 	avr-objcopy -O ihex ${TARGET}.elf ${TARGET}.hex
 	avr-size ${TARGET}.elf
 	avr-size ${TARGET}.hex

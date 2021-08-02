@@ -102,20 +102,19 @@ ret				;
 burst:				;
         rcall twi_start         ;
         rcall twi_sla_w         ;
-	ldi temp, 0		; from reg 0
+	ldi temp, 0		; register 0
 	mov data, temp		;
         rcall twi_data_w        ;
 
-        ldi r30, lo8(pm(regs))  ; Z
-        ldi r31, hi8(pm(regs))  ; Z
-        burst1:                 ; burst
-	lpm			; bytes
-	mov data, r0		;
+        ldi r30, lo8(pm(regs))  ; low Z
+        ldi r31, hi8(pm(regs))  ; high Z
+        burst1:                 ;
+	ld data, Z+		; bytes
         rcall twi_data_w        ;
-        adiw Z, 1
-	cpi r31, 234		; need steps till reg 233
+	inc temp		;
+	cpi temp, 234		; registers 1..233 (burst)
 	brne burst1		; r31 > 6 cause error
-	adiw Z, 1
+
         rcall twi_stop          ;
 ret				;
 
