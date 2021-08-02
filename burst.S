@@ -109,7 +109,7 @@ burst:				;
         ldi r30, lo8(pm(regs))  ; low Z
         ldi r31, hi8(pm(regs))  ; high Z
         burst1:                 ;
-	ld data, Z+		; bytes
+	lpm data, Z+		; bytes
         rcall twi_data_w        ;
 	inc temp		;
 	cpi temp, 234		; registers 1..233 (burst)
