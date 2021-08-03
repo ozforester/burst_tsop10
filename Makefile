@@ -6,15 +6,16 @@
 TARGET	 = burst
 SOURCES := $(wildcard *.S)
 OBJECTS  = $(SOURCES:.S=.o)
+CFLAGS = -fno-stack-protector -fno-pic -DF_CPU=4000000 -Wall -mmcu=atmega8
+LFLAGS = -no-pie
 
 all:
-	avr-gcc -DF_CPU=4000000 -Wall -mmcu=atmega8 -o ${TARGET} ${TARGET}.S
+	avr-gcc ${CFLAGS} -o ${TARGET} ${TARGET}.S
 	avr-objcopy -O ihex ${TARGET} ${TARGET}.hex
-	avr-size ${TARGET}.elf
 	avr-size ${TARGET}.hex
 
 flash:
 	avrdude -c usbasp -p m8 -B 2 -U flash:w:${TARGET}.hex
 
 clean:
-	rm -f $(OBJECTS) $(TARGET).o $(TARGET).elf $(TARGET).hex
+	rm -f $(OBJECTS) ${TARGET}  $(TARGET).o $(TARGET).elf $(TARGET).hex
