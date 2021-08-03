@@ -101,19 +101,21 @@ ret				;
 burst:				;
         rcall twi_start         ;
         rcall twi_sla_w         ;
+
 	ldi temp, 0		; send register number
 	mov data, temp		;
         rcall twi_data_w        ;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; <----
-        ldi ZL, pm_lo8(regs)   ; set pm
-        ldi ZH, pm_hi8(regs)   ; address
+
+        rcall twi_start         ;
+        rcall twi_sla_w         ;
+        ldi ZL, lo8(regs)   ; set pm the first
+        ldi ZH, hi8(regs)   ; burst address
         burst1:                 ;
-
-        lpm data, Z+            ; send data bytes
+        lpm data, Z             ; send data bytes
         rcall twi_data_w        ;
-
+	adiw Z, 1
 	inc temp		;
-	cpi temp, 233		; registers 1..233 (burst)
+	cpi temp, 233		; registers 0..232 (burst)
 	brne burst1		; r31 > 6 cause error
 
         rcall twi_stop          ;
@@ -127,7 +129,6 @@ polish:				;
         ldi data, 0xac          ;
         rcall twi_data_w        ;
         rcall twi_stop          ;
-
         rcall twi_start         ;
         rcall twi_sla_w         ;
 	ldi data, 3		; output control
