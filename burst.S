@@ -28,7 +28,8 @@ counter = 17			; delay counter reg
 code    = 18			; blink code reg
 address = 19			; twi address reg
 data    = 20			; twi data reg
-
+register = 21			; osc register number
+value	 = 22			; osc register value
 .section .text
 
 regs:
@@ -56,91 +57,163 @@ main:				;
         cpi address, 0          ; there was no answer?
         brne m1			;
 	rcall error_blink	; error blink
-	m1: rcall led_on	;
-	rcall prepare		; disable outputs etc.
-	rcall burst		; load registers
-	rcall polish		; soft reset and enable outputs
-	rcall sleep		; power safe
+	m1:			; 10M - led off, 5M - led on
+        rcall led_on            ;
+        ldi counter, 30         ; easy oscilloscope twi mesurement
+        rcall delay             ;
+	rcall burst_10M		; load registers
 	rcall led_off		;
-	ldi counter, 20		; easy oscilloscope twi mesurement
-	rcall delay		;
+        ldi counter, 30         ; easy oscilloscope twi mesurement
+        rcall delay             ;
+        rcall burst_5M         ; load registers
 	rjmp m1			;
 ret				;
 
-prepare:			;
-	rcall twi_start		;
-	rcall twi_sla_w		;
-	ldi data, 3		; disable outputs
-	rcall twi_data_w	;
-        ldi data, 0xff          ;
-        rcall twi_data_w        ;
-        rcall twi_stop          ;
+burst_10M:				;
+        ;ldi ZL, lo8(regs)   ; set pm the first
+        ;ldi ZH, hi8(regs)   ; burst address
+        ;burst1:                 ;
+        ;lpm data, Z             ; send data bytes
+        ;rcall twi_data_w        ;
+	;adiw Z, 1
+	;inc temp		;
+	;cpi temp, 233		; registers 0..232 (burst)
+	;brne burst1		; r31 > 6 cause error
+	; PLL
+	ldi register, 26	;
+	ldi value, 0xff		;
+        rcall write_reg         ;
+        ldi register, 27        ;
+        ldi value, 0xff         ;
+        rcall write_reg         ;
+        ldi register, 28        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 29        ;
+        ldi value, 0x10         ;
+        rcall write_reg         ;
+        ldi register, 30        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 31        ;
+        ldi value, 0xf0         ;
+        rcall write_reg         ;
+        ldi register, 32        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 33        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+	; SYNTH
+        ldi register, 42        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 43        ;
+        ldi value, 0x01         ;
+        rcall write_reg         ;
+        ldi register, 44        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 45        ;
+        ldi value, 0x2b         ;
+        rcall write_reg         ;
+        ldi register, 46        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 47        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 48        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 49        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 177       ;
+        ldi value, 0xa0         ;
+        rcall write_reg         ;
+	ldi register, 16	;
+        ldi value, 0x4f         ;
+        rcall write_reg         ;
+ret				;
 
+burst_5M:				;
+        ;ldi ZL, lo8(regs)   ; set pm the first
+        ;ldi ZH, hi8(regs)   ; burst address
+        ;burst1:                 ;
+        ;lpm data, Z             ; send data bytes
+        ;rcall twi_data_w        ;
+	;adiw Z, 1
+	;inc temp		;
+	;cpi temp, 233		; registers 0..232 (burst)
+	;brne burst1		; r31 > 6 cause error
+	; PLL
+	ldi register, 26	;
+	ldi value, 0xff		;
+        rcall write_reg         ;
+        ldi register, 27        ;
+        ldi value, 0xff         ;
+        rcall write_reg         ;
+        ldi register, 28        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 29        ;
+        ldi value, 0x10         ;
+        rcall write_reg         ;
+        ldi register, 30        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 31        ;
+        ldi value, 0xf0         ;
+        rcall write_reg         ;
+        ldi register, 32        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 33        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+	; SYNTH
+        ldi register, 42        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 43        ;
+        ldi value, 0x01         ;
+        rcall write_reg         ;
+        ldi register, 44        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 45        ;
+        ldi value, 0x58         ;
+        rcall write_reg         ;
+        ldi register, 46        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 47        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 48        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 49        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 177       ;
+        ldi value, 0xa0         ;
+        rcall write_reg         ;
+	ldi register, 16	;
+        ldi value, 0x4f         ;
+        rcall write_reg         ;
+ret				;
+
+write_reg:			;
         rcall twi_start         ;
         rcall twi_sla_w         ;
-	ldi temp, 16		; powerdown dividers (16-23 regs)
-	mov data, temp		;
+	mov data, register	;
         rcall twi_data_w        ;
-	prepare1:		; burst
-	ldi data, 0x80		;
-        rcall twi_data_w        ;
-	inc temp		;
-	cpi temp, 24		;
-	brne prepare1		;
-        rcall twi_stop          ;
-
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-        ldi data, 2             ; set interrupt masks (w/o reading)
-        rcall twi_data_w        ;
-        ldi data, 0x00          ;
+        mov data, value		;
         rcall twi_data_w        ;
         rcall twi_stop          ;
 ret				;
-
-burst:				;
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-
-	ldi temp, 0		; send register number
-	mov data, temp		;
-        rcall twi_data_w        ;
-
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-        ldi ZL, lo8(regs)   ; set pm the first
-        ldi ZH, hi8(regs)   ; burst address
-        burst1:                 ;
-        lpm data, Z             ; send data bytes
-        rcall twi_data_w        ;
-	adiw Z, 1
-	inc temp		;
-	cpi temp, 233		; registers 0..232 (burst)
-	brne burst1		; r31 > 6 cause error
-
-        rcall twi_stop          ;
-ret				;
-
-polish:				;
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-        ldi data, 177           ; plla and pllb soft reset
-        rcall twi_data_w        ;
-        ldi data, 0xac          ;
-        rcall twi_data_w        ;
-        rcall twi_stop          ;
-        rcall twi_start         ;
-        rcall twi_sla_w         ;
-	ldi data, 3		; output control
-        rcall twi_data_w        ;
-        ldi data, 0x07          ; enable clk 0,1,2
-        rcall twi_data_w        ;
-        rcall twi_stop          ;
-ret				;
-
-sleep:                          ;
-        nop                     ;
-ret                             ;
 
 twi_scan:			;
 	ldi address, 127	; will step backward
@@ -248,8 +321,8 @@ error_blink:			;
 ret				;
 
 delay:                          ; counter itself decrements by t0 isr
-        cpi counter, 0          ; just wait 0
-        brne delay              ;
+        cpi counter, 0          ; here is zero waiting
+        brne delay              ; set delay before call me
 ret               		; voila
 
 twi_init:			; 100 kHz @4MHz clock
