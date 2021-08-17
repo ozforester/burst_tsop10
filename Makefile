@@ -6,7 +6,8 @@
 TARGET	 = burst
 SOURCES := $(wildcard *.S)
 OBJECTS  = $(SOURCES:.S=.o)
-CFLAGS = -fno-stack-protector -fno-pic -DF_CPU=4000000 -Wall -mmcu=atmega8 -Os
+#CFLAGS = -fno-stack-protector -fno-pic -DF_CPU=4000000 -Wall -mmcu=atmega8 -Os
+CFLAGS = -no-pie -fno-stack-protector -fno-pic -DF_CPU=4000000 -Wall -mmcu=atmega8 -Os
 
 all:
 	avr-gcc ${CFLAGS} -o ${TARGET} ${TARGET}.S
