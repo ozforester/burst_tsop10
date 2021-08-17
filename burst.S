@@ -57,7 +57,7 @@ main:				;
         cpi address, 0          ; there was no answer?
         brne m1			;
 	rcall error_blink	; error blink
-	m1:			; 10M - led off, 5M - led on
+	m1:			;
         rcall led_on            ;
         ldi counter, 30         ; easy oscilloscope twi mesurement
         rcall delay             ;
