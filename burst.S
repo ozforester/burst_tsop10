@@ -1,10 +1,9 @@
-
 ; Copyright (c) 2021 ozforester. All rights reserved.
 ; Use of this source code is goverened by a MIT license
 ; that can be found in the LICENSE file.
 
 ; ATmega8 @4MHz internal osc. (H:D9, L:23)
-; feeds si5351a with clockbuilder data portion
+; feeds si5351a with precompiled registers
 ; bonus: scans twi bus for any si5351a address
 ; bonus: LED on D7 port will blink in case of TWI error or scan fail.
 
@@ -30,24 +29,29 @@ address = 19			; twi address reg
 data    = 20			; twi data reg
 register = 21			; osc register number
 value	 = 22			; osc register value
+rc       = 23			; registers counter
+
 .section .text
 
-regs:
-.byte 0x00,0x00,0x12,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x04,0x00,0x50,0x50,0x50,0x00,0x50,0x00,0x00,0x00,0x01,0x00,0x0a,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x5e,0x00,0x00
-.byte 0x00,0x00,0x00,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x1e,0x00,0x00,0x3c,0x3c,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-.byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 ; clockbuilder cooked 233 regs
+regs: ; eighteen regs
+.byte  26, 0xff
+.byte  27, 0xff
+.byte  28, 0x00
+.byte  29, 0x10
+.byte  30, 0x00
+.byte  31, 0xf0
+.byte  32, 0x00
+.byte  33, 0x00
+.byte  42, 0x00
+.byte  43, 0x01
+.byte  44, 0x03
+.byte  45, 0x82
+.byte  46, 0x00
+.byte  47, 0x00
+.byte  48, 0x00
+.byte  49, 0x00
+.byte 177, 0xa0
+.byte  16, 0x4f
 
 main:				;
 	rcall led_port_init	; D7 out,low
@@ -57,288 +61,33 @@ main:				;
         cpi address, 0          ; there was no answer?
         brne m1			;
 	rcall error_blink	; error blink
-	m1:			;
+	m1:			; reset loop
         rcall led_on            ;
         ldi counter, 30         ; easy oscilloscope twi mesurement
         rcall delay             ;
-	rcall burst_500k	; load registers
+	rcall burst		; program 5351
 	rcall led_off		;
-        ldi counter, 30         ; easy oscilloscope twi mesurement
+        ldi counter, 30         ;
         rcall delay             ;
-        rcall burst_1M         ; load registers
+        rcall burst	        ; load registers
 	rjmp m1			;
 ret				;
 
-burst_10M:				;
-        ;ldi ZL, lo8(regs)   ; set pm the first
-        ;ldi ZH, hi8(regs)   ; burst address
-        ;burst1:                 ;
-        ;lpm data, Z             ; send data bytes
-        ;rcall twi_data_w        ;
-	;adiw Z, 1
-	;inc temp		;
-	;cpi temp, 233		; registers 0..232 (burst)
-	;brne burst1		; r31 > 6 cause error
-	; PLL
-	ldi register, 26	;
-	ldi value, 0xff		;
-        rcall write_reg         ;
-        ldi register, 27        ;
-        ldi value, 0xff         ;
-        rcall write_reg         ;
-        ldi register, 28        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 29        ;
-        ldi value, 0x10         ;
-        rcall write_reg         ;
-        ldi register, 30        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 31        ;
-        ldi value, 0xf0         ;
-        rcall write_reg         ;
-        ldi register, 32        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 33        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-	; SYNTH
-        ldi register, 42        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 43        ;
-        ldi value, 0x01         ;
-        rcall write_reg         ;
-        ldi register, 44        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 45        ;
-        ldi value, 0x2b         ;
-        rcall write_reg         ;
-        ldi register, 46        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 47        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 48        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 49        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 177       ;
-        ldi value, 0xa0         ;
-        rcall write_reg         ;
-	ldi register, 16	;
-        ldi value, 0x4f         ;
-        rcall write_reg         ;
-ret				;
-
-burst_5M:				;
-        ;ldi ZL, lo8(regs)   ; set pm the first
-        ;ldi ZH, hi8(regs)   ; burst address
-        ;burst1:                 ;
-        ;lpm data, Z             ; send data bytes
-        ;rcall twi_data_w        ;
-	;adiw Z, 1
-	;inc temp		;
-	;cpi temp, 233		; registers 0..232 (burst)
-	;brne burst1		; r31 > 6 cause error
-	; PLL
-	ldi register, 26	;
-	ldi value, 0xff		;
-        rcall write_reg         ;
-        ldi register, 27        ;
-        ldi value, 0xff         ;
-        rcall write_reg         ;
-        ldi register, 28        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 29        ;
-        ldi value, 0x10         ;
-        rcall write_reg         ;
-        ldi register, 30        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 31        ;
-        ldi value, 0xf0         ;
-        rcall write_reg         ;
-        ldi register, 32        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 33        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-	; SYNTH
-        ldi register, 42        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 43        ;
-        ldi value, 0x01         ;
-        rcall write_reg         ;
-        ldi register, 44        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 45        ;
-        ldi value, 0x58         ;
-        rcall write_reg         ;
-        ldi register, 46        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 47        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 48        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 49        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 177       ;
-        ldi value, 0xa0         ;
-        rcall write_reg         ;
-	ldi register, 16	;
-        ldi value, 0x4f         ;
-        rcall write_reg         ;
-ret				;
-
-burst_1M:				;
-        ;ldi ZL, lo8(regs)   ; set pm the first
-        ;ldi ZH, hi8(regs)   ; burst address
-        ;burst1:                 ;
-        ;lpm data, Z             ; send data bytes
-        ;rcall twi_data_w        ;
-	;adiw Z, 1
-	;inc temp		;
-	;cpi temp, 233		; registers 0..232 (burst)
-	;brne burst1		; r31 > 6 cause error
-	; PLL
-	ldi register, 26	;
-	ldi value, 0xff		;
-        rcall write_reg         ;
-        ldi register, 27        ;
-        ldi value, 0xff         ;
-        rcall write_reg         ;
-        ldi register, 28        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 29        ;
-        ldi value, 0x10         ;
-        rcall write_reg         ;
-        ldi register, 30        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 31        ;
-        ldi value, 0xf0         ;
-        rcall write_reg         ;
-        ldi register, 32        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 33        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-	; SYNTH
-        ldi register, 42        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 43        ;
-        ldi value, 0x01         ;
-        rcall write_reg         ;
-        ldi register, 44        ;
-        ldi value, 0x01         ;
-        rcall write_reg         ;
-        ldi register, 45        ;
-        ldi value, 0xC0         ;
-        rcall write_reg         ;
-        ldi register, 46        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 47        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 48        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 49        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 177       ;
-        ldi value, 0xa0         ;
-        rcall write_reg         ;
-	ldi register, 16	;
-        ldi value, 0x4f         ;
-        rcall write_reg         ;
-ret				;
-
-burst_500k:			;
-        ;ldi ZL, lo8(regs)   ; set pm the first
-        ;ldi ZH, hi8(regs)   ; burst address
-        ;burst1:                 ;
-        ;lpm data, Z             ; send data bytes
-        ;rcall twi_data_w        ;
-	;adiw Z, 1
-	;inc temp		;
-	;cpi temp, 233		; registers 0..232 (burst)
-	;brne burst1		; r31 > 6 cause error
-	; PLL
-	ldi register, 26	;
-	ldi value, 0xff		;
-        rcall write_reg         ;
-        ldi register, 27        ;
-        ldi value, 0xff         ;
-        rcall write_reg         ;
-        ldi register, 28        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 29        ;
-        ldi value, 0x10         ;
-        rcall write_reg         ;
-        ldi register, 30        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 31        ;
-        ldi value, 0xf0         ;
-        rcall write_reg         ;
-        ldi register, 32        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 33        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-	; SYNTH
-        ldi register, 42        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 43        ;
-        ldi value, 0x01         ;
-        rcall write_reg         ;
-        ldi register, 44        ;
-        ldi value, 0x03         ;
-        rcall write_reg         ;
-        ldi register, 45        ;
-        ldi value, 0x82         ;
-        rcall write_reg         ;
-        ldi register, 46        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 47        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 48        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 49        ;
-        ldi value, 0x00         ;
-        rcall write_reg         ;
-        ldi register, 177       ;
-        ldi value, 0xa0         ;
-        rcall write_reg         ;
-	ldi register, 16	;
-        ldi value, 0x4f         ;
-        rcall write_reg         ;
+burst:			    	;
+	clr rc		    	;
+        ldi ZL, lo8(regs)   	; first reg
+        ldi ZH, hi8(regs)   	;
+        burst1:                 ;
+        lpm register, Z     	; read reg num
+        adiw Z, 1
+        lpm value, Z        	; read value
+        rcall write_reg         ;
+        inc rc                  ;
+	cpi rc, 18		; 18 registers
+	breq burst2		;
+        adiw Z, 1		;
+	rjmp burst1		;
+	burst2:			;
 ret				;
 
 write_reg:			;
