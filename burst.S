@@ -61,11 +61,11 @@ main:				;
         rcall led_on            ;
         ldi counter, 30         ; easy oscilloscope twi mesurement
         rcall delay             ;
-	rcall burst_10M		; load registers
+	rcall burst_500k	; load registers
 	rcall led_off		;
         ldi counter, 30         ; easy oscilloscope twi mesurement
         rcall delay             ;
-        rcall burst_5M         ; load registers
+        rcall burst_1M         ; load registers
 	rjmp m1			;
 ret				;
 
@@ -184,6 +184,142 @@ burst_5M:				;
         rcall write_reg         ;
         ldi register, 45        ;
         ldi value, 0x58         ;
+        rcall write_reg         ;
+        ldi register, 46        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 47        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 48        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 49        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 177       ;
+        ldi value, 0xa0         ;
+        rcall write_reg         ;
+	ldi register, 16	;
+        ldi value, 0x4f         ;
+        rcall write_reg         ;
+ret				;
+
+burst_1M:				;
+        ;ldi ZL, lo8(regs)   ; set pm the first
+        ;ldi ZH, hi8(regs)   ; burst address
+        ;burst1:                 ;
+        ;lpm data, Z             ; send data bytes
+        ;rcall twi_data_w        ;
+	;adiw Z, 1
+	;inc temp		;
+	;cpi temp, 233		; registers 0..232 (burst)
+	;brne burst1		; r31 > 6 cause error
+	; PLL
+	ldi register, 26	;
+	ldi value, 0xff		;
+        rcall write_reg         ;
+        ldi register, 27        ;
+        ldi value, 0xff         ;
+        rcall write_reg         ;
+        ldi register, 28        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 29        ;
+        ldi value, 0x10         ;
+        rcall write_reg         ;
+        ldi register, 30        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 31        ;
+        ldi value, 0xf0         ;
+        rcall write_reg         ;
+        ldi register, 32        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 33        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+	; SYNTH
+        ldi register, 42        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 43        ;
+        ldi value, 0x01         ;
+        rcall write_reg         ;
+        ldi register, 44        ;
+        ldi value, 0x01         ;
+        rcall write_reg         ;
+        ldi register, 45        ;
+        ldi value, 0xC0         ;
+        rcall write_reg         ;
+        ldi register, 46        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 47        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 48        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 49        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 177       ;
+        ldi value, 0xa0         ;
+        rcall write_reg         ;
+	ldi register, 16	;
+        ldi value, 0x4f         ;
+        rcall write_reg         ;
+ret				;
+
+burst_500k:			;
+        ;ldi ZL, lo8(regs)   ; set pm the first
+        ;ldi ZH, hi8(regs)   ; burst address
+        ;burst1:                 ;
+        ;lpm data, Z             ; send data bytes
+        ;rcall twi_data_w        ;
+	;adiw Z, 1
+	;inc temp		;
+	;cpi temp, 233		; registers 0..232 (burst)
+	;brne burst1		; r31 > 6 cause error
+	; PLL
+	ldi register, 26	;
+	ldi value, 0xff		;
+        rcall write_reg         ;
+        ldi register, 27        ;
+        ldi value, 0xff         ;
+        rcall write_reg         ;
+        ldi register, 28        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 29        ;
+        ldi value, 0x10         ;
+        rcall write_reg         ;
+        ldi register, 30        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 31        ;
+        ldi value, 0xf0         ;
+        rcall write_reg         ;
+        ldi register, 32        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 33        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+	; SYNTH
+        ldi register, 42        ;
+        ldi value, 0x00         ;
+        rcall write_reg         ;
+        ldi register, 43        ;
+        ldi value, 0x01         ;
+        rcall write_reg         ;
+        ldi register, 44        ;
+        ldi value, 0x03         ;
+        rcall write_reg         ;
+        ldi register, 45        ;
+        ldi value, 0x82         ;
         rcall write_reg         ;
         ldi register, 46        ;
         ldi value, 0x00         ;
